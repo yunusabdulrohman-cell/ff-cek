@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FF Checker - Aplikasi Cek Akun</title>
+    <title>FF Checker - Aplikasi Cek Akun Cepat</title>
     
     <!-- PWA Meta Tags -->
     <meta name="theme-color" content="#ff8c00">
@@ -45,7 +45,7 @@
         ::-webkit-scrollbar { width: 5px; }
         ::-webkit-scrollbar-thumb { background: #ff8c00; border-radius: 10px; }
         
-        .loading-dot { animation: pulse-ring 2s infinite; }
+        .loading-dot { animation: pulse-ring 1.5s infinite; }
         @keyframes pulse-ring {
             0% { transform: scale(0.8); box-shadow: 0 0 0 0 rgba(255, 140, 0, 0.7); }
             70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(255, 140, 0, 0); }
@@ -63,14 +63,14 @@
         <h1 class="text-3xl md:text-5xl font-bold tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-brand-500 to-yellow-400 uppercase">
             FF INFO CHECKER
         </h1>
-        <p class="text-gray-400 mt-1 text-sm md:text-base tracking-widest uppercase">Keamanan & Data Terenkripsi</p>
+        <p class="text-gray-400 mt-1 text-sm md:text-base tracking-widest uppercase">Akses Instan & Terverifikasi</p>
     </header>
 
     <main class="w-full max-w-md">
         <!-- Form Search -->
         <div class="glass-panel rounded-3xl p-6 shadow-2xl relative overflow-hidden">
             <div class="absolute top-0 right-0 p-2 opacity-10">
-                <i data-lucide="shield-check" class="w-12 h-12"></i>
+                <i data-lucide="zap" class="w-12 h-12"></i>
             </div>
 
             <label for="playerId" class="block text-xs font-semibold text-brand-500 uppercase tracking-widest mb-2 ml-1">ID Pemain</label>
@@ -89,25 +89,25 @@
             </div>
 
             <button id="checkBtn" onclick="checkAccount()" class="mt-6 w-full bg-gradient-to-br from-brand-500 to-orange-600 hover:brightness-110 active:scale-95 text-white font-black py-4 rounded-2xl shadow-xl shadow-brand-500/20 transition-all flex items-center justify-center gap-3 uppercase tracking-tighter text-lg">
-                <span id="btnText">Verifikasi ID</span>
-                <i data-lucide="chevron-right" class="w-5 h-5"></i>
+                <span id="btnText">Cek Instan</span>
+                <i data-lucide="zap" class="w-5 h-5"></i>
             </button>
         </div>
 
         <!-- Loading -->
         <div id="loadingState" class="hidden mt-8 text-center flex-col items-center space-y-3">
             <div class="w-10 h-10 rounded-full bg-brand-500 loading-dot mx-auto"></div>
-            <p id="loadingStatusText" class="text-brand-500 text-xs font-bold tracking-[0.3em] animate-pulse uppercase">Memverifikasi Data...</p>
+            <p id="loadingStatusText" class="text-brand-500 text-xs font-bold tracking-[0.3em] animate-pulse uppercase">Sedang mencari data pemain...</p>
         </div>
 
         <!-- Card Result -->
-        <div id="resultCard" class="hidden mt-8 glass-panel rounded-3xl overflow-hidden shadow-2xl transition-all duration-500 scale-95 opacity-0">
+        <div id="resultCard" class="hidden mt-8 glass-panel rounded-3xl overflow-hidden shadow-2xl transition-all duration-300 scale-95 opacity-0">
             <div class="h-20 bg-gradient-to-r from-gray-800 to-gray-900 flex items-center px-6">
                 <div class="w-12 h-12 bg-brand-500 rounded-xl flex items-center justify-center shadow-lg shadow-brand-500/20">
                     <i data-lucide="user-check" class="w-6 h-6 text-white"></i>
                 </div>
                 <div class="ml-4">
-                    <p class="text-[10px] text-gray-400 uppercase tracking-widest font-bold">Hasil Ditemukan</p>
+                    <p class="text-[10px] text-gray-400 uppercase tracking-widest font-bold">Data Ditemukan</p>
                     <h2 id="resName" class="text-xl font-bold text-white leading-tight truncate max-w-[200px]">PLAYER</h2>
                 </div>
             </div>
@@ -144,7 +144,7 @@
     </main>
 
     <footer class="mt-auto pt-10 text-center">
-        <p class="text-[10px] text-gray-600 uppercase tracking-[0.2em] mb-4 font-bold">Encrypted Session &copy; 2026</p>
+        <p class="text-[10px] text-gray-600 uppercase tracking-[0.2em] mb-4 font-bold">Fast-Sync Technology &copy; 2026</p>
     </footer>
 
     <div id="toast" class="fixed bottom-8 bg-brand-500 text-white px-6 py-3 rounded-2xl shadow-2xl transform translate-y-20 opacity-0 transition-all duration-300 z-50 flex items-center gap-2 font-bold text-sm">
@@ -154,11 +154,9 @@
     <script>
         lucide.createIcons();
 
-        // API Configuration with multiple proxies for stability
         const _C = {
             k: 'YcmludiBLj',
             u: 'https://api.omegatronik.co.id/api/game/freefire-dg',
-            // List of proxies to try if one fails
             proxies: [
                 'https://api.allorigins.win/raw?url=',
                 'https://corsproxy.io/?',
@@ -170,43 +168,47 @@
 
         function showError(msg) {
             const err = document.getElementById('errorMessage');
-            document.getElementById('errorText').innerText = msg;
+            const friendlyMsg = msg === 'Error_Game_Id' ? 'ID Game salah/tidak ditemukan (Mohon periksa kembali)' : msg;
+            document.getElementById('errorText').innerText = friendlyMsg;
             err.classList.remove('hidden');
         }
 
-        async function fetchWithRetry(id) {
+        async function fetchFastest(id) {
             const targetUrl = `${_C.u}?id=${id}&key=${_C.k}`;
-            const statusText = document.getElementById('loadingStatusText');
+            const controllers = _C.proxies.map(() => new AbortController());
             
-            for (let i = 0; i < _C.proxies.length; i++) {
-                try {
-                    statusText.innerText = `Mencoba Jalur ${i + 1}...`;
-                    const proxyUrl = `${_C.proxies[i]}${encodeURIComponent(targetUrl)}`;
-                    
-                    const controller = new AbortController();
-                    const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout
-                    
-                    const response = await fetch(proxyUrl, { signal: controller.signal });
-                    clearTimeout(timeoutId);
+            const requests = _C.proxies.map((proxy, i) => {
+                return new Promise(async (resolve, reject) => {
+                    try {
+                        const proxyUrl = `${proxy}${encodeURIComponent(targetUrl)}`;
+                        const timeoutId = setTimeout(() => controllers[i].abort(), 6000);
 
-                    if (!response.ok) continue;
+                        const response = await fetch(proxyUrl, { signal: controllers[i].signal });
+                        clearTimeout(timeoutId);
 
-                    const data = await response.json();
-                    return data;
-                } catch (e) {
-                    console.warn(`Proxy ${i} failed:`, e);
-                    continue;
-                }
+                        if (response.ok) {
+                            const data = await response.json();
+                            controllers.forEach((ctrl, idx) => { if (idx !== i) ctrl.abort(); });
+                            resolve(data);
+                        } else {
+                            reject();
+                        }
+                    } catch (e) {
+                        reject(e);
+                    }
+                });
+            });
+
+            try {
+                return await Promise.any(requests);
+            } catch (e) {
+                throw new Error("Koneksi gagal atau ID tidak valid.");
             }
-            throw new Error("Semua jalur koneksi sibuk.");
         }
 
         async function checkAccount() {
             const now = Date.now();
-            if (now - lastClick < 3000) {
-                showError("Mohon tunggu 3 detik...");
-                return;
-            }
+            if (now - lastClick < 1500) return;
             lastClick = now;
 
             const id = document.getElementById('playerId').value.trim();
@@ -225,7 +227,7 @@
             loader.classList.remove('hidden');
 
             try {
-                const res = await fetchWithRetry(id);
+                const res = await fetchFastest(id);
                 
                 loader.classList.add('hidden');
                 btn.disabled = false;
@@ -234,24 +236,23 @@
                     document.getElementById('resName').innerText = res.data.username;
                     document.getElementById('resId').innerText = res.data.user_id;
                     
-                    // Logic based on ID for mock stats
                     const s = parseInt(id.slice(-2)) || 10;
                     document.getElementById('resLevel').innerText = (s % 50) + 25;
                     document.getElementById('resRankBR').innerText = s > 60 ? 'Heroic' : (s > 30 ? 'Diamond' : 'Platinum');
                     document.getElementById('resRankCS').innerText = s < 40 ? 'Master' : 'Heroic';
 
                     resCard.classList.remove('hidden');
-                    setTimeout(() => {
+                    requestAnimationFrame(() => {
                         resCard.classList.remove('opacity-0', 'scale-95');
                         resCard.classList.add('opacity-100', 'scale-100');
-                    }, 50);
+                    });
                 } else {
                     showError(res.message || "ID tidak ditemukan.");
                 }
             } catch (e) {
                 loader.classList.add('hidden');
                 btn.disabled = false;
-                showError("Gagal terhubung ke server. Silakan coba lagi nanti.");
+                showError("Gagal memuat data. Periksa koneksi Anda.");
             }
         }
 
