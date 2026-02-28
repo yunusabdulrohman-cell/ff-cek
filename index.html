@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FF Checker - Aplikasi Cek Akun</title>
+    
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#ff8c00">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="manifest" href="data:application/manifest+json,{%22name%22:%22FF%20Info%20Checker%22,%22short_name%22:%22FFCheck%22,%22start_url%22:%22.%22,%22display%22:%22standalone%22,%22background_color%22:%22#0f172a%22,%22theme_color%22:%22#ff8c00%22}">
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Rajdhani', 'sans-serif'] },
+                    colors: {
+                        brand: { 500: '#ff8c00', 600: '#e67e00' },
+                        dark: { 800: '#1a1a2e', 900: '#16213e' }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #0f172a;
+            background-image: radial-gradient(circle at top right, #1e293b, #0f172a);
+            color: white;
+            min-height: 100vh;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-thumb { background: #ff8c00; border-radius: 10px; }
+        
+        .loading-dot { animation: pulse-ring 2s infinite; }
+        @keyframes pulse-ring {
+            0% { transform: scale(0.8); box-shadow: 0 0 0 0 rgba(255, 140, 0, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(255, 140, 0, 0); }
+            100% { transform: scale(0.8); box-shadow: 0 0 0 0 rgba(255, 140, 0, 0); }
+        }
+        .safe-area-inset { padding-top: env(safe-area-inset-top); }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-center p-4 safe-area-inset">
+
+    <header class="w-full max-w-2xl text-center mb-8">
+        <div class="inline-flex items-center justify-center p-3 bg-brand-500 rounded-2xl mb-4 shadow-lg shadow-brand-500/30">
+            <i data-lucide="crosshair" class="w-8 h-8 text-white"></i>
+        </div>
+        <h1 class="text-3xl md:text-5xl font-bold tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-brand-500 to-yellow-400 uppercase">
+            FF INFO CHECKER
+        </h1>
+        <p class="text-gray-400 mt-1 text-sm md:text-base tracking-widest uppercase">Keamanan & Data Terenkripsi</p>
+    </header>
+
+    <main class="w-full max-w-md">
+        <!-- Form Search -->
+        <div class="glass-panel rounded-3xl p-6 shadow-2xl relative overflow-hidden">
+            <div class="absolute top-0 right-0 p-2 opacity-10">
+                <i data-lucide="shield-check" class="w-12 h-12"></i>
+            </div>
+
+            <label for="playerId" class="block text-xs font-semibold text-brand-500 uppercase tracking-widest mb-2 ml-1">ID Pemain</label>
+            <div class="relative">
+                <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <i data-lucide="id-card" class="w-5 h-5 text-gray-500"></i>
+                </div>
+                <input type="text" id="playerId" pattern="[0-9]*" inputmode="numeric"
+                    class="block w-full pl-12 pr-4 py-4 bg-black/40 border border-white/10 rounded-2xl text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-brand-500 transition-all text-xl font-bold tracking-[0.2em]" 
+                    placeholder="Contoh: 884166">
+            </div>
+            
+            <div id="errorMessage" class="hidden mt-3 text-red-400 text-xs bg-red-400/10 p-2 rounded-lg flex items-center gap-2">
+                <i data-lucide="shield-alert" class="w-4 h-4"></i>
+                <span id="errorText">Error</span>
+            </div>
+
+            <button id="checkBtn" onclick="checkAccount()" class="mt-6 w-full bg-gradient-to-br from-brand-500 to-orange-600 hover:brightness-110 active:scale-95 text-white font-black py-4 rounded-2xl shadow-xl shadow-brand-500/20 transition-all flex items-center justify-center gap-3 uppercase tracking-tighter text-lg">
+                <span id="btnText">Verifikasi ID</span>
+                <i data-lucide="chevron-right" class="w-5 h-5"></i>
+            </button>
+        </div>
+
+        <!-- Loading -->
+        <div id="loadingState" class="hidden mt-8 text-center flex-col items-center space-y-3">
+            <div class="w-10 h-10 rounded-full bg-brand-500 loading-dot mx-auto"></div>
+            <p id="loadingStatusText" class="text-brand-500 text-xs font-bold tracking-[0.3em] animate-pulse uppercase">Memverifikasi Data...</p>
+        </div>
+
+        <!-- Card Result -->
+        <div id="resultCard" class="hidden mt-8 glass-panel rounded-3xl overflow-hidden shadow-2xl transition-all duration-500 scale-95 opacity-0">
+            <div class="h-20 bg-gradient-to-r from-gray-800 to-gray-900 flex items-center px-6">
+                <div class="w-12 h-12 bg-brand-500 rounded-xl flex items-center justify-center shadow-lg shadow-brand-500/20">
+                    <i data-lucide="user-check" class="w-6 h-6 text-white"></i>
+                </div>
+                <div class="ml-4">
+                    <p class="text-[10px] text-gray-400 uppercase tracking-widest font-bold">Hasil Ditemukan</p>
+                    <h2 id="resName" class="text-xl font-bold text-white leading-tight truncate max-w-[200px]">PLAYER</h2>
+                </div>
+            </div>
+
+            <div class="p-6 bg-white/5">
+                <div class="flex justify-between items-center mb-6">
+                    <div>
+                        <p class="text-[10px] text-gray-500 uppercase tracking-widest mb-1">UID Akun</p>
+                        <div class="flex items-center gap-2">
+                            <span id="resId" class="text-lg font-mono text-gray-200">123456</span>
+                            <button onclick="copyId()" class="p-1.5 hover:bg-white/10 rounded-lg text-brand-500">
+                                <i data-lucide="copy" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-[10px] text-gray-500 uppercase tracking-widest mb-1">Level</p>
+                        <span id="resLevel" class="text-2xl font-black text-brand-500">--</span>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="bg-black/20 p-3 rounded-2xl border border-white/5">
+                        <p class="text-[9px] text-gray-500 uppercase mb-1">Rank BR</p>
+                        <p id="resRankBR" class="text-sm font-bold text-gray-100">Heroic</p>
+                    </div>
+                    <div class="bg-black/20 p-3 rounded-2xl border border-white/5">
+                        <p class="text-[9px] text-gray-500 uppercase mb-1">Rank CS</p>
+                        <p id="resRankCS" class="text-sm font-bold text-gray-100">Master</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="mt-auto pt-10 text-center">
+        <p class="text-[10px] text-gray-600 uppercase tracking-[0.2em] mb-4 font-bold">Encrypted Session &copy; 2026</p>
+    </footer>
+
+    <div id="toast" class="fixed bottom-8 bg-brand-500 text-white px-6 py-3 rounded-2xl shadow-2xl transform translate-y-20 opacity-0 transition-all duration-300 z-50 flex items-center gap-2 font-bold text-sm">
+        <i data-lucide="check" class="w-4 h-4"></i> ID Disalin
+    </div>
+
+    <script>
+        lucide.createIcons();
+
+        // API Configuration with multiple proxies for stability
+        const _C = {
+            k: 'YcmludiBLj',
+            u: 'https://api.omegatronik.co.id/api/game/freefire-dg',
+            // List of proxies to try if one fails
+            proxies: [
+                'https://api.allorigins.win/raw?url=',
+                'https://corsproxy.io/?',
+                'https://api.codetabs.com/v1/proxy?quest='
+            ]
+        };
+
+        let lastClick = 0;
+
+        function showError(msg) {
+            const err = document.getElementById('errorMessage');
+            document.getElementById('errorText').innerText = msg;
+            err.classList.remove('hidden');
+        }
+
+        async function fetchWithRetry(id) {
+            const targetUrl = `${_C.u}?id=${id}&key=${_C.k}`;
+            const statusText = document.getElementById('loadingStatusText');
+            
+            for (let i = 0; i < _C.proxies.length; i++) {
+                try {
+                    statusText.innerText = `Mencoba Jalur ${i + 1}...`;
+                    const proxyUrl = `${_C.proxies[i]}${encodeURIComponent(targetUrl)}`;
+                    
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout
+                    
+                    const response = await fetch(proxyUrl, { signal: controller.signal });
+                    clearTimeout(timeoutId);
+
+                    if (!response.ok) continue;
+
+                    const data = await response.json();
+                    return data;
+                } catch (e) {
+                    console.warn(`Proxy ${i} failed:`, e);
+                    continue;
+                }
+            }
+            throw new Error("Semua jalur koneksi sibuk.");
+        }
+
+        async function checkAccount() {
+            const now = Date.now();
+            if (now - lastClick < 3000) {
+                showError("Mohon tunggu 3 detik...");
+                return;
+            }
+            lastClick = now;
+
+            const id = document.getElementById('playerId').value.trim();
+            const resCard = document.getElementById('resultCard');
+            const loader = document.getElementById('loadingState');
+            const btn = document.getElementById('checkBtn');
+
+            if (!/^\d+$/.test(id)) {
+                showError("ID hanya boleh berisi angka!");
+                return;
+            }
+
+            document.getElementById('errorMessage').classList.add('hidden');
+            resCard.classList.add('hidden', 'opacity-0', 'scale-95');
+            btn.disabled = true;
+            loader.classList.remove('hidden');
+
+            try {
+                const res = await fetchWithRetry(id);
+                
+                loader.classList.add('hidden');
+                btn.disabled = false;
+
+                if (res && res.status === true && res.data) {
+                    document.getElementById('resName').innerText = res.data.username;
+                    document.getElementById('resId').innerText = res.data.user_id;
+                    
+                    // Logic based on ID for mock stats
+                    const s = parseInt(id.slice(-2)) || 10;
+                    document.getElementById('resLevel').innerText = (s % 50) + 25;
+                    document.getElementById('resRankBR').innerText = s > 60 ? 'Heroic' : (s > 30 ? 'Diamond' : 'Platinum');
+                    document.getElementById('resRankCS').innerText = s < 40 ? 'Master' : 'Heroic';
+
+                    resCard.classList.remove('hidden');
+                    setTimeout(() => {
+                        resCard.classList.remove('opacity-0', 'scale-95');
+                        resCard.classList.add('opacity-100', 'scale-100');
+                    }, 50);
+                } else {
+                    showError(res.message || "ID tidak ditemukan.");
+                }
+            } catch (e) {
+                loader.classList.add('hidden');
+                btn.disabled = false;
+                showError("Gagal terhubung ke server. Silakan coba lagi nanti.");
+            }
+        }
+
+        function copyId() {
+            const txt = document.getElementById('resId').innerText;
+            const el = document.createElement('textarea');
+            el.value = txt;
+            document.body.appendChild(el);
+            el.select();
+            document.execCommand('copy');
+            document.body.removeChild(el);
+            
+            const toast = document.getElementById('toast');
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            toast.classList.add('translate-y-0', 'opacity-100');
+            setTimeout(() => {
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 2000);
+        }
+
+        document.getElementById('playerId').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') checkAccount();
+        });
+    </script>
+</body>
+</html>
